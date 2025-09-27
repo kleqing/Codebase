@@ -99,7 +99,7 @@ public class Program
                 Name = "Authorization",
                 Type = SecuritySchemeType.Http,
                 BearerFormat = "JWT",
-                Scheme = "Bearer"
+                Scheme = "bearer"
             });
             
             c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -201,7 +201,7 @@ public class Program
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("EnableSwagger"))
         {
             app.UseSwagger();
             app.UseSwaggerUI();
