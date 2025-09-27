@@ -95,7 +95,6 @@ public class UserRepository : IUserRepository
         var userInDb = await _context.User.FirstOrDefaultAsync(u => u.UserId == user.UserId);
         return userInDb != null && BCrypt.Net.BCrypt.Verify(password, userInDb.PasswordHash);
     }
-    
 
     public async Task<bool> IsEmailConfirmedAsync(User user)
     {
