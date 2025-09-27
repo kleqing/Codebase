@@ -148,9 +148,9 @@ public class Program
         
         builder.Services.PostConfigure<JwtBearerOptions>("Bearer", options =>
         {
-            var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER")!;
-            var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")!;
-            var secret = Environment.GetEnvironmentVariable("JWT_SECRET")!;
+            var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"] ?? string.Empty;
+            var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? builder.Configuration["Jwt:Audience"] ?? string.Empty;
+            var secret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Secret"] ?? string.Empty;
 
             options.TokenValidationParameters = new TokenValidationParameters
             {
