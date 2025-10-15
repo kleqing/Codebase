@@ -4,6 +4,7 @@ using System.Text.Json;
 using dotenv.net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -23,7 +24,17 @@ public class Program
         DotEnv.Load();
         var builder = WebApplication.CreateBuilder(args);
         
-        var corsPolicy = "AllowAll";
+        var corsPolicy = "AllowSpecificOrigins"; 
+        
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
+        if (allowedOrigins == null || allowedOrigins.Length == 0)
+        {
+            var originsFromEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+            if (!string.IsNullOrEmpty(originsFromEnv))
+            {
+                allowedOrigins = originsFromEnv.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            }
+        }
 
         //* Register database context
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -59,10 +70,19 @@ public class Program
             options.AddPolicy(name: corsPolicy,
                 policy =>
                 {
-                    policy.WithOrigins("https://example.com") //* For testing, change to AllowAnyOrigin() in production, also remove AllowCredentials()
-                        .AllowAnyHeader()
-                        .AllowAnyMethod()
-                        .AllowCredentials();
+                    if (allowedOrigins != null && allowedOrigins.Length > 0)
+                    {
+                        policy.WithOrigins(allowedOrigins)
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    }
+                    else
+                    {
+                        policy.AllowAnyOrigin()
+                            .AllowAnyHeader()
+                            .AllowAnyMethod();
+                    }
                 });
         });
         
@@ -141,8 +161,23 @@ public class Program
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultSignInScheme = "External";
         })
         .AddJwtBearer("Bearer", _ => { })
+        .AddCookie("External", options =>
+        {
+            options.Events.OnRedirectToLogin = context =>
+            {
+                context.Response.StatusCode = 401; // Unauthorized
+                return Task.CompletedTask;
+            };
+            options.Events.OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = 403; // Forbidden
+                return Task.CompletedTask;
+            };
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+        })
         .AddGoogle(options =>
         {
             var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? builder.Configuration["Authentication:Google:ClientId"] ?? string.Empty;
@@ -171,6 +206,39 @@ public class Program
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
                 ClockSkew = TimeSpan.Zero, //* Disable the default 5-minute clock skew
                 RequireExpirationTime = true //* Require the token to have an expiration time
+            };
+            
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Cookies["ACCESS_TOKEN"];
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        context.Token = accessToken;
+                    }
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(context.Exception, "Authentication failed.");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = _ =>
+                {
+                    // You can add additional validation here if needed
+                    return Task.CompletedTask;
+                },
+                OnChallenge = context =>
+                {
+                    // Skip the default logic.
+                    context.HandleResponse();
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "application/json";
+                    var result = JsonSerializer.Serialize(new { error = "You are not authorized" });
+                    return context.Response.WriteAsync(result);
+                }
             };
         });
         
@@ -230,6 +298,15 @@ public class Program
             {
                 appError.Run(async context =>
                 {
+                    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+                    var exceptionHandlerPathFeature = 
+                        context.Features.Get<IExceptionHandlerFeature>();
+
+                    if (exceptionHandlerPathFeature?.Error != null)
+                    {
+                        logger.LogError(exceptionHandlerPathFeature.Error, "An unhandled exception has occurred.");
+                    }
+
                     context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(JsonSerializer.Serialize(new { error = "Internal Server Error" }));
