@@ -31,6 +31,10 @@ public class Program
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException("Database connection string is not set in environment variables.");
+            }
         }
         
         builder.Services.AddDbContext<ApplicationDbContext>(options
@@ -176,8 +180,17 @@ public class Program
         //* Redis Cache
         builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
-            var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING") ?? 
-                                        builder.Configuration["Redis:ConnectionString"] ?? string.Empty;
+            var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+
+            if (string.IsNullOrEmpty(redisConnectionString))
+            {
+                redisConnectionString = builder.Configuration.GetValue<string>("Redis:ConnectionString");
+                if (string.IsNullOrEmpty(redisConnectionString))
+                {
+                    throw new InvalidOperationException("Redis connection string is not set in environment variables or configuration.");
+                }
+
+            }
 
             if (string.IsNullOrWhiteSpace(redisConnectionString))
             {
