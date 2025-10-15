@@ -26,8 +26,12 @@ public class Program
         var corsPolicy = "AllowAll";
 
         //* Register database context
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                               Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING") ?? string.Empty;
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING");
+        }
         
         builder.Services.AddDbContext<ApplicationDbContext>(options
             => options.UseSqlServer(connectionString));
