@@ -185,11 +185,11 @@ public class AuthorizeServices : IAuthorizeServices
             bool result = await _redisDatabase.StringSetAsync(redisKey, user.UserId.ToString(), TimeSpan.FromHours(1), When.NotExists);
             if (result)
             {
-                var encodedToken = WebUtility.UrlEncode(token);
+                var encodedToken = Uri.EscapeDataString(token);
                 var backendUrl = UrlHelper.GetBackendUrl(_configuration);
 
                 var resetLink =
-                    $"{backendUrl}/reset-password?token={encodedToken}";
+                    $"{backendUrl}/api/auth/reset-password/verify?token={encodedToken}";
                 
                 await _emailSender.SendEmailAsync(user.Email, "Reset your password", resetLink);
             }
@@ -226,7 +226,13 @@ public class AuthorizeServices : IAuthorizeServices
     
     public async Task ResetPasswordAsync(ResetPasswordRequest request)
     {
-        var redisKey = $"{RedisPrefix}:{request.Token}";
+        if (string.IsNullOrWhiteSpace(request.Token))
+        {
+            throw new GlobalException("Password reset token is required");
+        }
+        
+        var decodedToken = Uri.UnescapeDataString(request.Token);
+        var redisKey = $"{RedisPrefix}:{decodedToken}";
         var userIdValue = await _redisDatabase.StringGetAsync(redisKey);
 
         if (userIdValue.IsNullOrEmpty)
