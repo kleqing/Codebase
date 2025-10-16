@@ -135,6 +135,7 @@ public class AuthController : ControllerBase
             return BadRequest("Email confirmation failed.");
         }
 
+        //* If verification is successful, redirect to frontend with success message. You may change the URL as needed.
         var frontendUrl = UrlHelper.GetFrontendUrl(_configuration);
         return Redirect($"{frontendUrl}/verify-success?verifiedEmail={Uri.EscapeDataString(user.Email)}");
     }
