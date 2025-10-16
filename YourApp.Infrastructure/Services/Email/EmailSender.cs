@@ -19,40 +19,40 @@ public class EmailSender : IEmailSender
         try
         {
             string fromMail = Environment.GetEnvironmentVariable("EMAIL")!;
-            if (string.IsNullOrEmpty(fromMail))
+            if (string.IsNullOrWhiteSpace(fromMail))
             {
                 fromMail = _configuration["EmailSettings:Email"]!;
-                if (string.IsNullOrEmpty(fromMail))
+                if (string.IsNullOrWhiteSpace(fromMail))
                 {
                     throw new Exception("Email sender not configured");
                 }
             }
 
             string fromPassword = Environment.GetEnvironmentVariable("EMAIL_PASSWORD")!;
-            if (string.IsNullOrEmpty(fromPassword))
+            if (string.IsNullOrWhiteSpace(fromPassword))
             {
                 fromPassword = _configuration["EmailSettings:Password"]!;
-                if (string.IsNullOrEmpty(fromPassword))
+                if (string.IsNullOrWhiteSpace(fromPassword))
                 {
                     throw new Exception("Email password not configured");
                 }
             }
 
             string host = Environment.GetEnvironmentVariable("EMAIL_HOST")!;
-            if (string.IsNullOrEmpty(host))
+            if (string.IsNullOrWhiteSpace(host))
             {
                 host = _configuration["EmailSettings:Host"]!;
-                if (string.IsNullOrEmpty(host))
+                if (string.IsNullOrWhiteSpace(host))
                 {
                     throw new Exception("Email SMTP host not configured");
                 }
             }
 
             string port = Environment.GetEnvironmentVariable("EMAIL_PORT")!;
-            if (string.IsNullOrEmpty(port))
+            if (string.IsNullOrWhiteSpace(port))
             {
                 port = _configuration["EmailSettings:Port"]!;
-                if (string.IsNullOrEmpty(port))
+                if (string.IsNullOrWhiteSpace(port))
                 {
                     throw new Exception("Email SMTP port not configured");
                 }
