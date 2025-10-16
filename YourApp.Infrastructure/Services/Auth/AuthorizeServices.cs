@@ -169,12 +169,14 @@ public class AuthorizeServices : IAuthorizeServices
             //* To prevent email enumeration, do not reveal that the user does not exist
             return;
         }
+        
         if (!await _userRepository.IsEmailConfirmedAsync(user))
         {
             //* If email is not confirmed, resend confirmation email automatically
             await ResendEmailConfirmationAsync(user);
             throw new GlobalException("Your email is not verified. We've resent the verification link.");
         }
+        
         var token = await _authTokenProcess.GeneratePasswordTokenResetAsync(user);
         var redisKey = $"{RedisPrefix}:{token}";
 

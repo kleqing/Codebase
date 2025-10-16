@@ -257,12 +257,6 @@ public class Program
                 {
                     throw new InvalidOperationException("Redis connection string is not set in environment variables or configuration.");
                 }
-
-            }
-
-            if (string.IsNullOrWhiteSpace(redisConnectionString))
-            {
-                throw new InvalidOperationException("Redis connection string is not set in environment variables.");
             }
 
             var configurationOptions = ConfigurationOptions.Parse(redisConnectionString, true);

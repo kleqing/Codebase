@@ -18,21 +18,45 @@ public class EmailSender : IEmailSender
     {
         try
         {
-            string fromMail = Environment.GetEnvironmentVariable("EMAIL") 
-                              ?? _configuration["EmailSettings:Email"] 
-                              ?? throw new Exception("Email sender not configured");
+            string fromMail = Environment.GetEnvironmentVariable("EMAIL")!;
+            if (string.IsNullOrEmpty(fromMail))
+            {
+                fromMail = _configuration["EmailSettings:Email"]!;
+                if (string.IsNullOrEmpty(fromMail))
+                {
+                    throw new Exception("Email sender not configured");
+                }
+            }
 
-            string fromPassword = Environment.GetEnvironmentVariable("EMAIL_PASSWORD") 
-                                  ?? _configuration["EmailSettings:Password"] 
-                                  ?? throw new Exception("Email password not configured");
-            
-            string host = Environment.GetEnvironmentVariable("EMAIL_HOST") 
-                          ?? _configuration["EmailSettings:Host"] 
-                          ?? "smtp.gmail.com";
-            
-            string port = Environment.GetEnvironmentVariable("EMAIL_PORT") 
-                          ?? _configuration["EmailSettings:Port"] 
-                          ?? "587";
+            string fromPassword = Environment.GetEnvironmentVariable("EMAIL_PASSWORD")!;
+            if (string.IsNullOrEmpty(fromPassword))
+            {
+                fromPassword = _configuration["EmailSettings:Password"]!;
+                if (string.IsNullOrEmpty(fromPassword))
+                {
+                    throw new Exception("Email password not configured");
+                }
+            }
+
+            string host = Environment.GetEnvironmentVariable("EMAIL_HOST")!;
+            if (string.IsNullOrEmpty(host))
+            {
+                host = _configuration["EmailSettings:Host"]!;
+                if (string.IsNullOrEmpty(host))
+                {
+                    throw new Exception("Email SMTP host not configured");
+                }
+            }
+
+            string port = Environment.GetEnvironmentVariable("EMAIL_PORT")!;
+            if (string.IsNullOrEmpty(port))
+            {
+                port = _configuration["EmailSettings:Port"]!;
+                if (string.IsNullOrEmpty(port))
+                {
+                    throw new Exception("Email SMTP port not configured");
+                }
+            }
             
             using var smtpClient = new SmtpClient();
             smtpClient.Host = host; // SMTP server
