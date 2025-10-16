@@ -164,34 +164,42 @@ public class AuthorizeServices : IAuthorizeServices
     public async Task InitiatePasswordReset(string email)
     {
         var user = await _userRepository.FindByEmailAsync(email);
-        if (user != null && await _userRepository.IsEmailConfirmedAsync(user))
+        if (user == null)
         {
-            var token = await _authTokenProcess.GeneratePasswordTokenResetAsync(user);
-            var redisKey = $"{RedisPrefix}:{token}";
+            //* To prevent email enumeration, do not reveal that the user does not exist
+            return;
+        }
+        if (!await _userRepository.IsEmailConfirmedAsync(user))
+        {
+            //* If email is not confirmed, resend confirmation email automatically
+            await ResendEmailConfirmationAsync(user);
+            throw new GlobalException("Your email is not verified. We've resent the verification link.");
+        }
+        var token = await _authTokenProcess.GeneratePasswordTokenResetAsync(user);
+        var redisKey = $"{RedisPrefix}:{token}";
 
-            try
+        try
+        {
+            bool result = await _redisDatabase.StringSetAsync(redisKey, user.UserId.ToString(), TimeSpan.FromHours(1), When.NotExists);
+            if (result)
             {
-                bool result = await _redisDatabase.StringSetAsync(redisKey, user.UserId.ToString(), TimeSpan.FromHours(1), When.NotExists);
-                if (result)
-                {
-                    var encodedToken = WebUtility.UrlEncode(token);
-                    var backendUrl = UrlHelper.GetBackendUrl(_configuration);
+                var encodedToken = WebUtility.UrlEncode(token);
+                var backendUrl = UrlHelper.GetBackendUrl(_configuration);
 
-                    var resetLink =
-                        $"{backendUrl}/reset-password?userId={user.UserId}&token={encodedToken}";
-                    
-                    await _emailSender.SendEmailAsync(user.Email, "Reset your password", resetLink);
-                }
-                else
-                {
-                    // A reset request is already in progress
-                    throw new GlobalException("A password reset request is already in progress. Please check your email.");
-                }
+                var resetLink =
+                    $"{backendUrl}/reset-password?token={encodedToken}";
+                
+                await _emailSender.SendEmailAsync(user.Email, "Reset your password", resetLink);
             }
-            catch
+            else
             {
-                throw new GlobalException("An error occurred while processing your request. Please try again later.");
+                // A reset request is already in progress
+                throw new GlobalException("A password reset request is already in progress. Please check your email.");
             }
+        }
+        catch
+        {
+            throw new GlobalException("An error occurred while processing your request. Please try again later.");
         }
     }
     
