@@ -223,6 +223,7 @@ public class AuthorizeServices : IAuthorizeServices
                 $"Error checking token in Redis: {ex.Message}");
         }
     }
+    
     public async Task ResetPasswordAsync(ResetPasswordRequest request)
     {
         var redisKey = $"{RedisPrefix}:{request.Token}";
