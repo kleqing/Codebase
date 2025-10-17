@@ -186,10 +186,11 @@ public class AuthorizeServices : IAuthorizeServices
             if (result)
             {
                 var encodedToken = Uri.EscapeDataString(token);
-                var backendUrl = UrlHelper.GetBackendUrl(_configuration);
+                var frontendUrl = UrlHelper.GetFrontendUrl(_configuration);
 
                 var resetLink =
-                    $"{backendUrl}/api/auth/reset-password/verify?token={encodedToken}";
+                    $"{frontendUrl}/api/auth/reset-password/verify?token={encodedToken}"; 
+                //* For testing the token in backend without frontend, replace the frontendUrl with backendUrl
                 
                 await _emailSender.SendEmailAsync(user.Email, "Reset your password", resetLink);
             }
