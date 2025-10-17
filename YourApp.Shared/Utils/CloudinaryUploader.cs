@@ -2,6 +2,7 @@
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using YourApp.Shared.Exceptions;
 
 namespace YourApp.Shared.Utils;
 
@@ -9,12 +10,43 @@ public class CloudinaryUploader
 {
     private readonly Cloudinary _cloudinary;
 
+    
     public CloudinaryUploader(IConfiguration configuration)
     {
+        var cloud = Environment.GetEnvironmentVariable("CLOUDIRENSUBSCRIPTION");
+        if (string.IsNullOrWhiteSpace(cloud))
+        {
+            cloud = configuration["Cloud:Provider"];
+            if (string.IsNullOrWhiteSpace(cloud))
+            {
+                throw new GlobalException("Cloudinary cloud name not configured");
+            }
+        }
+        
+        var apiKey = Environment.GetEnvironmentVariable("CLOUDINARYAPIKEY");
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            apiKey = configuration["Cloud:APIKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                throw new GlobalException("Cloudinary API key not configured");
+            }
+        }
+        
+        var apiSecret = Environment.GetEnvironmentVariable("CLOUDINARYAPISECRET");
+        if (string.IsNullOrWhiteSpace(apiSecret))
+        {
+            apiSecret = configuration["Cloud:APISecret"];
+            if (string.IsNullOrWhiteSpace(apiSecret))
+            {
+                throw new GlobalException("Cloudinary API secret not configured");
+            }
+        }
+        
         var account = new Account(
-            Environment.GetEnvironmentVariable("CLOUD_STORAGE_PROVIDER") ?? configuration["Cloud:Provider"],
-            Environment.GetEnvironmentVariable("CLOUD_STORAGE_API_KEY") ?? configuration["Cloud:APIKey"],
-            Environment.GetEnvironmentVariable("CLOUD_STORAGE_API_SECRET") ?? configuration["Cloud:APISecret"]
+            cloud,
+            apiKey,
+            apiSecret
         );
         _cloudinary = new Cloudinary(account)
         {
